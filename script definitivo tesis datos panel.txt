@@ -1,0 +1,115 @@
+library(car)
+library(TSA)
+library(tseries)
+library(lmtest)
+library(fBasics)
+library(rgl)
+library(forecast)
+library(openxlsx)
+library(timsac)
+library(strucchange) 
+library(sandwich) 
+library(nlme)
+library(foreign)
+library(gplots)
+library(plm)
+
+
+############################################## modelo
+
+datos <-read.table("C:/Users/Alex/Desktop/data/DatapanelTesispuntocondiferenciapercentil.txt",  header=TRUE, sep=";", na.strings="NA", dec=".", strip.white=TRUE)
+datos
+
+################# Graficos
+
+coplot(IDHr ~ YEAR|COD, type="l", data=datos) # Lines
+coplot(IDHr ~ YEAR|COD, type="b", data=datos) # Points and lines
+
+scatterplot(IDHr ~ YEAR|COD, boxplots=FALSE, smooth=TRUE, reg.line=FALSE, data=datos)
+
+plotmeans(IDHr ~ COD, main="Heterogeneidad entre países", data=datos)
+
+plotmeans(IDHr ~ YEAR, main="Heterogeneidad a lo largo de los años", data=datos)
+
+ols <-lm(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd,
+ data=datos)
+summary(ols)
+
+yhat <- ols$fitted
+plot(datos$INBpc, datos$IDHr, pch=19, xlab="x1", ylab="y")
+abline(lm(datos$IDHr~datos$INBpc),lwd=3, col="red")
+
+# Pais como variable dummy
+fixed.dum <-lm(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd + factor(COUNTRY) - 1, data=datos)
+summary(fixed.dum)
+yhat <- fixed.dum$fitted
+scatterplot(yhat~datos$INBpc|datos$COUNTRY, boxplots=FALSE, xlab="x1", ylab="yhat",smooth=FALSE)
+abline(lm(datos$IDHr~datos$INBpc),lwd=3, col="red")
+
+
+### Tentativo Signo esperado pero no significativo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Testing for serial correlation |||| If p-value > 0.05, No serial correlation
+pbgtest(fixed)
+pbgtest(random)
+
+residuos=residuals(fixed)
+residuos
+jarqueberaTest(residuos)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+adf.test(Panel.set$IDHr, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+adf.test(Panel.set$INBpc, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+adf.test(Panel.set$IGINIGM, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+adf.test(Panel.set$GasSociald, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+adf.test(Panel.set$VOZYRENDpd, k=2)
+
+### Testing for heteroskedasticity |||| If p-value > 0.05, No Presence of heteroskedasticity   
+# If hetersokedaticity is detected you can use robust covariance matrix to account for it. See the following pages.
+library(lmtest)
+bptest(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd + factor(COD), data = datos, studentize=F)
+
+coeftest(fixed) 
+coeftest(fixed, vcovHC) 
+coeftest(fixed, vcovHC(fixed, method = "arellano")) # Heteroskedasticity consistent coefficients (Arellano)
+coeftest(fixed, vcovHC(fixed, type = "HC3")) # Heteroskedasticity consistent coefficients, type 3
+# The following shows the HC standard errors of the coefficients
+t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(fixed, type = x)))))
+
+
+
+# Para random effects
+coeftest(random) 
+coeftest(random, vcovHC) 
+coeftest(random, vcovHC(random, type = "HC3"))
+# The following shows the HC standard errors of the coefficients
+t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(random, type = x)))))

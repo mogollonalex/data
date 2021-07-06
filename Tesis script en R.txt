@@ -1,0 +1,692 @@
+﻿library(car)
+library(TSA)
+library(tseries)
+library(lmtest)
+library(fBasics)
+library(rgl)
+library(forecast)
+library(openxlsx)
+library(timsac)
+library(strucchange) 
+library(sandwich) 
+library(nlme)
+library(foreign)
+library(gplots)
+library(plm)
+############################################################################# Datos panel
+
+
+datos <-read.table("C:/Users/Alex/Desktop/data/DatapanelTesispunto.txt",  header=TRUE, sep=";", na.strings="NA", dec=".", strip.white=TRUE)
+datos
+
+plotmeans(IDHr ~ COD, main="Heterogeneidad entre países", data=datos)
+
+plotmeans(IDHr ~ YEAR, main="Heterogeneidad a lo largo de los años", data=datos)
+
+
+ols <-lm(IDHr ~ IGINIGM+IGINICEPAL, data=datos)
+summary(ols)
+yhat <- ols$fitted
+plot(datos$IGINIGM+IGINICEPAL, datos$IDHr, pch=19, xlab="IGINIGM+IGINICEPAL", ylab="IDHr")
+abline(lm(datos$IDHr~datos$IGINIGM+IGINICEPAL),lwd=3, col="red")
+
+yhat <- fixed.dum$fitted
+library(car)
+scatterplot(yhat~datos$IGINIGM+IGINICEPAL|datos$COD, boxplots=FALSE, xlab="x1", ylab="yhat",smooth=FALSE)
+abline(lm(datos$IDHr~datos$IGINIGM+IGINICEPAL),lwd=3, col="red")
+
+
+ols <-lm(IDHr ~ IGINIGM+INBpc+CONTCORR+GasSocial, data=datos)
+summary(ols)
+yhat <- ols$fitted
+plot(datos$IGINIGM+INBpc+CONTCORR+GasSocial, datos$IDHr, pch=19, xlab="GINIGM+INBpc+CONTCORR+GasSocial", ylab="IDHr")
+abline(lm(datos$IDHr~datos$GINIGM+INBpc+CONTCORR+GasSocial),lwd=3, col="red")
+
+
+### Efecto fijo
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+IGINICEPAL+INBpc+CONTCORR+EGOB+ESTPOL+CALIREG+RJUE+VOZYREND+IPC+ILIB+IDEM+GasSocial, data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### Efecto aleatorio
+library(plm)
+random <-plm(IDHr ~ IGINIGM+IGINICEPAL+INBpc+CONTCORR+EGOB+ESTPOL+CALIREG+RJUE+VOZYREND+IPC+ILIB+IDEM+GasSocial, data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+### Efecto fijo
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+CONTCORR+GasSocial, data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+### Efecto aleatorio
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+CONTCORR+GasSocial, data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Testing for serial correlation |||| If p-value > 0.05, No serial correlation
+pbgtest(fixed)
+pbgtest(random)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$IDHr, k=2)
+
+### Testing for heteroskedasticity |||| If p-value > 0.05, No Presence of heteroskedasticity   
+# If hetersokedaticity is detected you can use robust covariance matrix to account for it. See the following pages.
+library(lmtest)
+bptest(IDHr ~ IGINIGM+INBpc+CONTCORR+GasSocial + factor(COD), data = datos, studentize=F)
+
+
+
+
+### Efecto fijo
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+IGINICEPAL+INBpc+RJUE+IPC+ILIB+IDEM+GasSocial, data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+### Efecto aleatorio
+library(plm)
+random <-plm(IDHr ~ IGINIGM+IGINICEPAL+INBpc+RJUE+IPC+ILIB+IDEM+GasSocial, data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$IGINIGM, k=2)
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$INBpc, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$GasSocial, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$RJUE, k=2)
+
+# Correción
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$RJUE, k=2)
+RJUEd <-Panel.set$RJUE
+RJUEd <- diff(RJUEd)
+adf.test(RJUEd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$GasSocial, k=2)
+GasSociald <-Panel.set$GasSocial
+GasSociald <- diff(GasSociald)
+adf.test(GasSociald, k=2)
+
+
+
+
+
+
+## No se como interpretarlo
+fixed.dum <-lm(IDHr ~ IGINIGM+IGINICEPAL + factor(COD) - 1, data=datos)
+summary(fixed.dum)
+
+
+
+
+
+
+
+
+
+plotmeans(IDHr ~ COD, main="Heterogeneidad entre países", data=datos)
+
+plotmeans(IDHr ~ YEAR, main="Heterogeneidad a lo largo de los años", data=datos)
+
+
+### Tentativo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSocial+RJUE+
+EGOB+ESTPOL, data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSocial+RJUE+
+EGOB+ESTPOL+ESTPOL, data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Testing for serial correlation |||| If p-value > 0.05, No serial correlation
+pbgtest(fixed)
+pbgtest(random)
+
+residuos=residuals(fixed)
+residuos
+jarqueberaTest(residuos)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$IDHr, k=2)
+
+### Testing for heteroskedasticity |||| If p-value > 0.05, No Presence of heteroskedasticity   
+# If hetersokedaticity is detected you can use robust covariance matrix to account for it. See the following pages.
+library(lmtest)
+bptest(IDHr ~ IGINIGM+INBpc+GasSocial+RJUE+EGOB+ESTPOL + factor(COD), data = datos, studentize=F)
+
+
+# Heteroskedasticity consistent coefficients (Arellano)
+coeftest(fixed, vcovHC(fixed, method = "arellano")) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################################## modelo
+
+datos <-read.table("C:/Users/Alex/Desktop/data/DatapanelTesispuntocondiferenciapercentil.txt",  header=TRUE, sep=";", na.strings="NA", dec=".", strip.white=TRUE)
+datos
+
+
+plotmeans(IDHr ~ COD, main="Heterogeneidad entre países", data=datos)
+
+plotmeans(IDHr ~ YEAR, main="Heterogeneidad a lo largo de los años", data=datos)
+
+
+### Tentativo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+LLIB,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+LLIB,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Testing for serial correlation |||| If p-value > 0.05, No serial correlation
+pbgtest(fixed)
+pbgtest(random)
+
+residuos=residuals(fixed)
+residuos
+jarqueberaTest(residuos)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$IDHr, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LLIB <-Panel.set$LLIB
+adf.test(LLIB, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IGINIGM <-Panel.set$IGINIGM
+adf.test(IGINIGM, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+GasSociald <-Panel.set$GasSociald
+adf.test(GasSociald, k=2)
+
+
+### Testing for heteroskedasticity |||| If p-value > 0.05, No Presence of heteroskedasticity   
+# If hetersokedaticity is detected you can use robust covariance matrix to account for it. See the following pages.
+library(lmtest)
+bptest(IDHr ~ IGINIGM+INBpc+GasSocial+LLIB + factor(COD), data = datos, studentize=F)
+
+coeftest(random) 
+coeftest(random, vcovHC) 
+coeftest(random, vcovHC(random, type = "HC3"))
+# The following shows the HC standard errors of the coefficients
+t(sapply(c("HC0", "HC1", "HC2", "HC3", "HC4"), function(x) sqrt(diag(vcovHC(random, type = x)))))
+
+
+
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IDHr <-Panel.set$IDHr
+adf.test(IDHr, k=2)
+IDHrd <- diff(IDHr)
+adf.test(IDHrd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+INBpc <-Panel.set$INBpc
+adf.test(INBpc, k=2)
+INBpcd <- diff(INBpc)
+adf.test(INBpcd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IGINIGM <-Panel.set$IGINIGM
+adf.test(IGINIGM, k=2)
+IGINIGMd <- diff(IGINIGM)
+adf.test(IGINIGMd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+GasSocial <-Panel.set$GasSocial
+adf.test(GasSocial, k=2)
+LGasSocial <-Panel.set$GasSocial
+adf.test(log(LGasSocial), k=2)
+GasSociald <- diff(GasSocial)
+adf.test(GasSociald, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+RJUE <-Panel.set$RJUE
+adf.test(RJUE, k=2)
+RJUEd <- diff(RJUE)
+adf.test(RJUEd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+RJUEp <-Panel.set$RJUEp
+adf.test(RJUEp, k=2)
+RJUEpd <- diff(RJUEp)
+adf.test(RJUEpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IDEM <-Panel.set$IDEM
+adf.test(IDEM, k=2)
+IDEMd <- diff(IDEM)
+adf.test(IDEMd, k=2)
+IDEMd <- log(IDEM)
+adf.test(IDEMd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+ILIB <-Panel.set$ILIB
+adf.test(ILIB, k=2)
+LILIB <- log(ILIB)
+adf.test(LILIB, k=2)
+ILIBd <- diff(ILIB)
+adf.test(ILIBd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IPC <-Panel.set$IPC
+adf.test(IPC, k=2)
+LIPC <- log(IPC)
+adf.test(LIPC, k=2)
+IPCd <- diff(IPC)
+adf.test(IPCd, k=2)
+
+###################################################################3
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present   ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+CONTCORRp <-Panel.set$CONTCORRp
+adf.test(CONTCORRp, k=2)
+CONTCORRpd <- diff(CONTCORRp)
+adf.test(CONTCORRpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present   ########### Siiiiiii
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+EGOBp <-Panel.set$EGOBp
+adf.test(EGOBp, k=2)
+EGOBpd <- diff(EGOBp)
+adf.test(EGOBpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present ############ Siiiiii
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+ESTPOLp <-Panel.set$ESTPOLp
+adf.test(ESTPOLp, k=2)
+ESTPOLpd <- diff(ESTPOLp)
+adf.test(ESTPOLpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present    ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+CALIREGp <-Panel.set$CALIREGp
+adf.test(CALIREGp, k=2)
+CALIREGpd <- diff(CALIREGp)
+adf.test(CALIREGpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present   ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+RJUEp <-Panel.set$RJUEp
+adf.test(RJUEp, k=2)
+RJUEpd <- diff(RJUEp)
+adf.test(RJUEpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present ####### Siiiiiii
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+VOZYRENDp <-Panel.set$VOZYRENDp
+adf.test(VOZYRENDp, k=2)
+VOZYRENDpd <- diff(VOZYRENDp)
+adf.test(VOZYRENDpd, k=2)
+
+
+###################################################################3
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present   ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LCONTCORRp <-Panel.set$LCONTCORRp
+adf.test(LCONTCORRp, k=2)
+LCONTCORRpd <- diff(LCONTCORRp)
+adf.test(LCONTCORRpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present   ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LEGOBp <-Panel.set$LEGOBp
+adf.test(LEGOBp, k=2)
+LEGOBpd <- diff(LEGOBp)
+adf.test(LEGOBpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present ############ Siiiiii
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LESTPOLp <-Panel.set$LESTPOLp
+adf.test(LESTPOLp, k=2)
+LESTPOLpd <- diff(LESTPOLp)
+adf.test(LESTPOLpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present    ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LCALIREGp <-Panel.set$LCALIREGp
+adf.test(LCALIREGp, k=2)
+LCALIREGpd <- diff(LCALIREGp)
+adf.test(LCALIREGpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present   ########### Noooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LRJUEp <-Panel.set$LRJUEp
+adf.test(LRJUEp, k=2)
+LRJUEpd <- diff(LRJUEp)
+adf.test(LRJUEpd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present ####### Noooooooooooooooooo
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+LVOZYRENDp <-Panel.set$LVOZYRENDp
+adf.test(LVOZYRENDp, k=2)
+LVOZYRENDpd <- diff(LVOZYRENDp)
+adf.test(LVOZYRENDpd, k=2)
+
+#####################################################
+
+
+### Tentativo Noooooooooooooooooo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDp,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+VOZYRENDp,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+### Tentativo Signo esperado pero no significativo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+LESTPOLp,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+LESTPOLp,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+### Tentativo 
+### within   Signo esperado pero no significativo
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+ESTPOLp,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+ESTPOLp,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+
+
+### Tentativo 
+### within   Signo esperado pero no significativo
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+LEGOBp,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+LEGOBp,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Tentativo Signo esperado pero no significativo
+### within
+library(plm)
+fixed <- plm(log(IDHr) ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+### random
+library(plm)
+random <-plm(log(IDHr) ~ IGINIGM+INBpc+GasSociald+VOZYRENDpd,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+
+
+
+
+
+
+####  corregido
+
+### Tentativo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+RJUEpd,
+ data=datos, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+RJUEpd,
+ data=datos, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Testing for serial correlation |||| If p-value > 0.05, No serial correlation
+pbgtest(fixed)
+pbgtest(random)
+
+residuos=residuals(fixed)
+residuos
+jarqueberaTest(residuos)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$IDHr, k=2)
+
+### Testing for heteroskedasticity |||| If p-value > 0.05, No Presence of heteroskedasticity   
+# If hetersokedaticity is detected you can use robust covariance matrix to account for it. See the following pages.
+library(lmtest)
+bptest(IDHr ~ IGINIGM+INBpc+GasSocial+RJUE + factor(COD), data = datos, studentize=F)
+
+
+# Heteroskedasticity consistent coefficients (Arellano)
+coeftest(fixed, vcovHC(fixed, method = "arellano")) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################## Corregido
+
+plotmeans(IDHr ~ COD, main="Heterogeneidad entre países", data=datos)
+
+plotmeans(IDHr ~ YEAR, main="Heterogeneidad a lo largo de los años", data=datos)
+
+
+### Tentativo
+### within
+library(plm)
+fixed <- plm(IDHr ~ IGINIGM+INBpc+GasSociald+RJUEd, index=c("COD", "YEAR"), model="within")
+summary(fixed)
+
+
+### random
+library(plm)
+random <-plm(IDHr ~ IGINIGM+INBpc+GasSociald+RJUEd, index=c("COD", "YEAR"), model="random")
+summary(random)
+
+
+
+################# Elegir el modelo
+### Fixed or Random: Hausman test |||| If p-value > 0.05, then use random effects
+phtest(fixed, random)
+
+### Testing for serial correlation |||| If p-value > 0.05, No serial correlation
+pbgtest(fixed)
+pbgtest(random)
+
+residuos=residuals(fixed)
+residuos
+jarqueberaTest(residuos)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+library(tseries)
+adf.test(Panel.set$IDHr, k=2)
+
+### Testing for heteroskedasticity |||| If p-value > 0.05, No Presence of heteroskedasticity   
+# If hetersokedaticity is detected you can use robust covariance matrix to account for it. See the following pages.
+library(lmtest)
+bptest(IDHr ~ IGINIGM+INBpc+GasSociald+RJUEd + factor(COD), data = datos, studentize=F)
+
+
+# Heteroskedasticity consistent coefficients (Arellano)
+coeftest(fixed, vcovHC(fixed, method = "arellano")) 
+
+
+
+
+
+
+
+
+
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IDHr <-Panel.set$IDHr
+IDHrd <- diff(IDHr)
+adf.test(IDHrd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+INBpc <-Panel.set$INBpc
+INBpcd <- diff(INBpc)
+adf.test(INBpcd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+IGINIGM <-Panel.set$IGINIGM
+IGINIGMd <- diff(IGINIGM)
+adf.test(IGINIGMd, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+GasSocial <-Panel.set$GasSocial
+GasSociald <- diff(GasSocial)
+adf.test(GasSociald, k=2)
+
+#Testing for unit roots/stationarity |||| If p-value < 0.05 then no unit roots present
+Panel.set <- plm.data(datos, index = c("COD", "YEAR"))
+RJUE <-Panel.set$RJUE
+RJUEd <- diff(RJUE)
+adf.test(RJUEd, k=2)
+

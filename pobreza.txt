@@ -1,0 +1,8 @@
+hasta 2016 https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=1&idTema=927&idIndicador=161&idioma=e
+sin datos https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=37&idTema=877&idIndicador=2966&idioma=e
+si https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=1&idTema=927&idIndicador=3328&idioma=e
+https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=1&idTema=927&idIndicador=3347&idioma=e
+2017 https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=37&idTema=876&idIndicador=3076&idioma=e
+pocos paises https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=45&idTema=1358&idIndicador=4189&idioma=e
+2017 https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=1&idTema=927&idIndicador=1712&idioma=e
+no https://cepalstat-prod.cepal.org/cepalstat/tabulador/ConsultaIntegrada.asp?IdAplicacion=45&idTema=1358&idIndicador=4187&idioma=e
